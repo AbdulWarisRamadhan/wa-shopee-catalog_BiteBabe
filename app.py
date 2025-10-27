@@ -13,7 +13,17 @@ VERIFY_TOKEN = os.getenv('VERIFY_TOKEN')
 
 @app.route('/')
 def home():
-    return "🚀 WA Shopee Catalog System is Running!"
+    return """
+    <html>
+        <head><title>WA Shopee Catalog</title></head>
+        <body>
+            <h1>🚀 WA Shopee Catalog System is Running!</h1>
+            <p><a href="/admin/products">Admin Products</a></p>
+            <p><a href="/webhook">Webhook</a></p>
+            <p>System ready for WhatsApp Business API</p>
+        </body>
+    </html>
+    """
 
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
@@ -63,7 +73,40 @@ def admin_products():
     products = get_all_products()
     return jsonify(products)
 
+@app.route('/admin/products/add', methods=['POST'])
+def admin_add_product():
+    """Tambah produk baru via API"""
+    from csv_manager import add_product
+    data = request.json
+    
+    product = add_product(
+        name=data['name'],
+        price=data['price'],
+        description=data['description'],
+        image_url=data.get('image_url', ''),
+        category=data['category'],
+        stock=data['stock']
+    )
+    return jsonify({'success': True, 'product': product})
+
+from datetime import datetime
+# Health check untuk cloud
+@app.route('/health')
+def health():
+    return jsonify({
+        'status': 'healthy', 
+        'message': 'WA Shopee Catalog is running!',
+        'environment_variables': {
+            'whatsapp_token_loaded': bool(os.getenv('WHATSAPP_TOKEN')),
+            'phone_number_loaded': bool(os.getenv('PHONE_NUMBER_ID')),
+            'verify_token_loaded': bool(os.getenv('VERIFY_TOKEN'))
+        }
+    })
 if __name__ == '__main__':
+    # Untuk cloud, pakai port dari environment variable
+    port = int(os.environ.get('PORT', 5000))
     print("🚀 Starting WA Shopee Catalog System...")
-    print("📱 http://localhost:5000")
-    app.run(debug=True, port=5000)
+    print(f"📱 Server: http://localhost:{port}")
+    print("🔗 Webhook: /webhook")
+    print("👨‍💼 Admin: /admin/products")
+    app.run(host='0.0.0.0', port=port, debug=False)
